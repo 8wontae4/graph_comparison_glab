@@ -18,7 +18,7 @@ def assign_pattern(df):
 
 st.title("CSV 패턴 분석 도구")
 
-uploaded_files = st.file_uploader("CSV 파일 업로드", type=["csv"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("CSV 다중 파일 업로드-Glab.v1", type=["csv"], accept_multiple_files=True)
 file_data = {}
 user_settings = {}
 
