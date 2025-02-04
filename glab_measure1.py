@@ -142,7 +142,7 @@ if uploaded_files:
     
     ax3.set_xlabel("Sec")
     ax3.set_ylabel("Del ADC")
-    ax3.legend(loc='upper center', bbox_to_anchor=(1.20, 1.0), ncol=1)
+    ax3.legend(loc='upper center', bbox_to_anchor=(1.32, 1.1), ncol=1)
     st.pyplot(fig3)
     
     # 파일별 비교 그래프 데이터를 하나의 DataFrame으로 병합
