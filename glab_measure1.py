@@ -46,24 +46,51 @@ if len(dfs) > 1:
             x_min = st.number_input("📌 X축 최소값 입력", value=float(dfs[selected_files[0]][x_axis].min()))
             x_max = st.number_input("📌 X축 최대값 입력", value=float(dfs[selected_files[0]][x_axis].max()))
 
-            # 📉 비교 그래프 생성
-            st.subheader(f"📊 {x_axis} vs {y_axis} 비교 그래프")
-            fig, ax = plt.subplots()
+            # 📌 비교 그래프 활성화 여부 체크박스
+            show_main_graph = st.checkbox("📌 Sec vs Sloat4 비교 그래프 보기", value=True)
+            
+            filtered_data = {file: dfs[file][[x_axis, y_axis]].copy() for file in selected_files}  # 기본값 설정
+            
+            if show_main_graph:
+                # 📉 비교 그래프 생성
+                st.subheader(f"📊 {x_axis} vs {y_axis} 비교 그래프")
+                fig, ax = plt.subplots()
 
-            # 비교 데이터 저장용 데이터프레임 생성
-            filtered_data = {}
+                # 비교 데이터 저장용 데이터프레임 생성
+                filtered_data = {}
 
-            # 각 파일의 데이터를 같은 그래프에 출력
-            for file in selected_files:
-                df_filtered = dfs[file][(dfs[file][x_axis] >= x_min) & (dfs[file][x_axis] <= x_max)]
-                sns.lineplot(data=df_filtered, x=x_axis, y=y_axis, label=file, ax=ax)
-                filtered_data[file] = df_filtered[[x_axis, y_axis]].copy()
+                # 각 파일의 데이터를 같은 그래프에 출력
+                for file in selected_files:
+                    df_filtered = dfs[file][(dfs[file][x_axis] >= x_min) & (dfs[file][x_axis] <= x_max)]
+                    sns.lineplot(data=df_filtered, x=x_axis, y=y_axis, label=file, ax=ax)
+                    filtered_data[file] = df_filtered[[x_axis, y_axis]].copy()
 
-            ax.set_xlim(x_min, x_max)  # X축 범위 적용
-            ax.set_xlabel(x_axis)
-            ax.set_ylabel(y_axis)
-            ax.legend(loc='upper right', bbox_to_anchor=(1.5, 1))  # 범례를 그래프 밖 우측 상단으로 이동
-            st.pyplot(fig)
+                ax.set_xlim(x_min, x_max)  # X축 범위 적용
+                ax.set_xlabel(x_axis)
+                ax.set_ylabel(y_axis)
+                ax.legend(loc='upper right', bbox_to_anchor=(1.5, 1))  # 범례를 그래프 밖 우측 상단으로 이동
+                st.pyplot(fig)
+
+            # 📌 추가 분석 그래프 활성화 여부 체크박스
+            show_extra_graph = st.checkbox("📌 추가 분석 그래프 보기")
+            
+            if show_extra_graph:
+                st.subheader(f"📊 {y_axis} 값 변화 분석 그래프")
+                fig2, ax2 = plt.subplots()
+
+                # x_min에서의 y 값을 기준으로 차이를 절대값으로 변환
+                for file in selected_files:
+                    df_filtered = filtered_data[file]
+                    if not df_filtered.empty:
+                        y_min_value = df_filtered[df_filtered[x_axis] == x_min][y_axis].values[0]
+                        df_filtered["y_diff_abs"] = abs(df_filtered[y_axis] - y_min_value)
+                        sns.lineplot(data=df_filtered, x=x_axis, y="y_diff_abs", label=f"{file} 변화", ax=ax2)
+
+                ax2.set_xlim(x_min, x_max)
+                ax2.set_xlabel(x_axis)
+                ax2.set_ylabel("절대값 차이")
+                ax2.legend(loc='upper right', bbox_to_anchor=(1.5, 1))
+                st.pyplot(fig2)
 
             # 고유한 X축 값 정리
             all_x_values = sorted(set().union(*[df[x_axis].tolist() for df in filtered_data.values()]))
@@ -85,7 +112,20 @@ if len(dfs) > 1:
             # 엑셀 파일로 변환 후 다운로드 버튼 추가
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                # 'Sec vs Sloat4 비교 그래프' 데이터 저장
                 result_df.to_excel(writer, sheet_name='Comparison', index=False)
+                
+                # 'Sloat4 값 변화 분석 그래프' 데이터 저장
+                if show_extra_graph:
+                    extra_result_df = pd.DataFrame({x_axis: all_x_values})
+                    for file, df in filtered_data.items():
+                        df_grouped = df.groupby(x_axis)['y_diff_abs'].apply(lambda x: list(x)).reset_index()
+                        max_repeats = df_grouped['y_diff_abs'].apply(len).max()
+                        y_cols = [f"{file}_Diff_Y{i+1}" for i in range(max_repeats)]
+                        df_expanded = df_grouped['y_diff_abs'].apply(pd.Series).rename(columns=dict(enumerate(y_cols)))
+                        df_final = pd.concat([df_grouped[x_axis], df_expanded], axis=1)
+                        extra_result_df = extra_result_df.merge(df_final, on=x_axis, how='left')
+                    extra_result_df.to_excel(writer, sheet_name='Difference_Analysis', index=False)
             output.seek(0)
             st.download_button(label="📥 비교 결과 다운로드 (Excel)", data=output, file_name=file_name, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         else:
