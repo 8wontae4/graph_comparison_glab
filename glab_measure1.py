@@ -16,13 +16,16 @@ def assign_pattern(df):
     df['Pattern'] = pattern_list  # 새로운 컬럼 추가
     return df
 
-st.title("CSV 패턴 분석 도구")
+st.title("CSV 패턴 분석 도구-Glab.v1.1")
 
-uploaded_files = st.file_uploader("CSV 다중 파일 업로드-Glab.v1", type=["csv"], accept_multiple_files=True)
+uploaded_files = st.file_uploader("CSV 파일 업로드", type=["csv"], accept_multiple_files=True)
 file_data = {}
 user_settings = {}
 
 if uploaded_files:
+    # 첫 번째 파일 이름의 처음 12글자를 기본값으로 설정
+    default_file_name = uploaded_files[0].name[:12] + "_Comparison_Data.xlsx"
+    
     for uploaded_file in uploaded_files:
         df = pd.read_csv(uploaded_file)
         df = assign_pattern(df)  # 패턴 번호 부여
@@ -168,4 +171,9 @@ if uploaded_files:
         result_df.to_excel(writer, sheet_name="Comparison_Data", index=False)
         
     output.seek(0)
-    st.download_button("📥 파일별 비교 그래프 데이터 엑셀 다운로드", data=output, file_name=st.text_input("저장할 엑셀 파일 이름", value="Comparison_Data.xlsx"), mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.download_button(
+        "📥 파일별 비교 그래프 데이터 엑셀 다운로드",
+        data=output,
+        file_name=st.text_input("저장할 엑셀 파일 이름", value=default_file_name),  # 기본값 설정
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
